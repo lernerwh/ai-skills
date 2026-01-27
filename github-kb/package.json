@@ -2,8 +2,8 @@
   "name": "github-kb",
   "version": "1.0.0",
   "description": "GitHub 知识库搜索 skill - 智能搜索代码示例、文档和讨论",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "jest",
