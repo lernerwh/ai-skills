@@ -1,0 +1,14 @@
+{
+  "name": "skill-generator",
+  "version": "1.0.0",
+  "description": "Meta-skill that automatically generates new skills based on user requirements",
+  "author": {
+    "name": "lernerwh"
+  },
+  "skills": [
+    {
+      "name": "skill-generator",
+      "path": "skills/skill-generator/SKILL.md"
+    }
+  ]
+}
