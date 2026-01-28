@@ -24,15 +24,51 @@
 
 ## 生成的技能结构
 
+### 简单技能 (无代码)
+
+```
+your-skill/
+├── skills/your-skill/
+│   ├── SKILL.md          # 技能定义 (必需)
+│   └── README.md         # 使用说明 (必需)
+├── .claude-plugin/
+│   └── plugin.json
+└── package.json
+```
+
+### 完整技能 (包含文档和工具)
+
 ```
 your-skill/
 ├── skills/your-skill/
 │   ├── SKILL.md          # 技能定义 (必需)
 │   ├── README.md         # 使用说明 (必需)
-│   └── template.md       # 模板文件 (可选)
+│   ├── docs/             # 子文档目录
+│   │   ├── PLAN.md       # 实施计划
+│   │   ├── DESIGN.md     # 设计文档
+│   │   ├── API.md        # API 文档
+│   │   ├── TESTING.md    # 测试文档
+│   │   └── CONTRIBUTING.md # 贡献指南
+│   └── src/              # 源代码 (可选)
+│       ├── index.ts      # 主入口
+│       ├── types.ts      # 类型定义
+│       ├── core/         # 核心逻辑
+│       └── utils/        # 工具函数
+├── scripts/              # 脚本工具
+│   ├── build.sh          # 构建脚本
+│   ├── test.sh           # 测试脚本
+│   ├── deploy.sh         # 部署脚本
+│   └── setup.sh          # 安装脚本
+├── tools/                # 工具集
+│   ├── validators/       # 验证工具
+│   ├── generators/       # 生成器
+│   └── formatters/       # 格式化工具
+├── tests/                # 测试文件
+├── examples/             # 使用示例
 ├── .claude-plugin/
-│   └── plugin.json       # 插件配置
-└── package.json          # 依赖配置
+│   └── plugin.json
+├── package.json
+└── tsconfig.json
 ```
 
 ## SKILL.md 格式说明
@@ -84,6 +120,28 @@ A: 按以下步骤：
 2. 在 Claude Code 中重新加载技能
 3. 尝试触发技能
 4. 根据需要调整描述和触发条件
+
+### Q: 什么时候需要创建子文档？
+
+A: 根据技能复杂度决定：
+- **简单技能**: 只需要 SKILL.md + README.md
+- **中等技能**: 添加 API.md (如果有代码) + TESTING.md (如果有测试)
+- **复杂技能**: 添加所有子文档 (PLAN.md, DESIGN.md, API.md, TESTING.md, CONTRIBUTING.md)
+
+### Q: 什么时候需要创建脚本工具？
+
+A: 根据项目需求：
+- **build.sh**: 需要编译 TypeScript 时
+- **test.sh**: 有测试套件时
+- **deploy.sh**: 需要部署流程时
+- **setup.sh**: 需要环境配置时
+
+### Q: tools/ 目录是什么？
+
+A: tools/ 目录包含可复用的工具模块：
+- **validators/**: 参数验证工具
+- **generators/**: 代码生成工具
+- **formatters/**: 输出格式化工具
 
 ### Q: 生成的技能如何共享？
 
@@ -151,6 +209,14 @@ Skill Generator 支持以下配置：
 如果你创建了有用的技能，欢迎贡献到 `ai-skills` 仓库！
 
 ## 更新日志
+
+- **v1.1.0** (2026-01-28): 增强版元技能
+  - ✨ 新增完整的子文档生成指南 (PLAN.md, DESIGN.md, API.md, TESTING.md, CONTRIBUTING.md)
+  - ✨ 新增脚本工具模板 (build.sh, test.sh, deploy.sh, setup.sh)
+  - ✨ 新增 TypeScript 工具集模板 (validators, generators, formatters)
+  - ✨ 新增文档与工具选择指南，根据技能复杂度智能推荐
+  - 📝 完善使用流程，包含 5 个步骤：需求 → 设计 → 代码 → 文档 → 脚本
+  - 📝 更新输出格式，明确列出所有可创建的文件类型
 
 - **v1.0.0** (2026-01-28): 初始版本
   - 支持基础技能模板生成
