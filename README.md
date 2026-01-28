@@ -8,10 +8,11 @@
 **元技能** - 让 AI 自动创建新技能的技能。
 
 **功能**：
-- 根据用户需求自动生成新技能模板
-- 提供技能命名规范和最佳实践
-- 自动生成 SKILL.md 和 README.md
-- 支持带代码实现的复杂技能
+- 智能分析用户需求，自动提取技能规格
+- 自动生成完整的技能文件结构
+- 包含 TypeScript 代码实现框架
+- 自动生成 SKILL.md 和 README.md 文档
+- 支持简单/中等/复杂三种模板类型
 
 **使用场景**：
 - 用户说"帮我创建一个xxx技能"
@@ -22,7 +23,10 @@
 ```
 "帮我创建一个日志分析技能"
 "写一个自动生成单元测试的skill"
+"创建一个代码搜索工具"
 ```
+
+**技术栈**：TypeScript
 
 ### 🔍 GitHub Knowledge Base (github-kb)
 从 GitHub 仓库中搜索和检索代码示例、文档、讨论和解决方案的技能。
@@ -62,10 +66,17 @@ ai-skills/
 │   │   └── skill-generator/
 │   │       ├── SKILL.md        # 技能定义文件
 │   │       ├── README.md       # 技能使用说明
-│   │       └── skill-template.md  # 技能模板
+│   │       └── src/            # TypeScript 源代码
+│   │           ├── index.ts    # 主入口
+│   │           ├── types.ts    # 类型定义
+│   │           ├── core/       # 核心逻辑
+│   │           │   └── generator.ts
+│   │           └── utils/      # 工具函数
+│   │               └── skill-parser.ts
 │   ├── .claude-plugin/
 │   │   └── plugin.json
-│   └── package.json
+│   ├── package.json
+│   └── tsconfig.json
 ├── github-kb/           # GitHub 知识库技能
 │   ├── skills/
 │   │   └── github-kb/

@@ -2,19 +2,21 @@
   "name": "skill-generator",
   "version": "1.0.0",
   "description": "技能自动生成器 - 让 AI 自动创建新技能的元技能",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "skills/skill-generator/dist/src/index.js",
+  "types": "skills/skill-generator/dist/src/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "test": "jest",
-    "lint": "eslint src/**/*.ts"
+    "build": "cd skills/skill-generator && tsc",
+    "test": "cd skills/skill-generator && jest",
+    "lint": "cd skills/skill-generator && eslint src/**/*.ts",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "skill-generator",
     "meta-skill",
     "automation",
     "claude-skill",
-    "ai-skill"
+    "ai-skill",
+    "typescript"
   ],
   "author": "lernerwh",
   "license": "MIT",
@@ -26,5 +28,11 @@
     "@types/jest": "^29.5.0",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0"
-  }
+  },
+  "files": [
+    "skills/skill-generator/dist",
+    "skills/skill-generator/src",
+    "skills/skill-generator/SKILL.md",
+    "skills/skill-generator/README.md"
+  ]
 }
