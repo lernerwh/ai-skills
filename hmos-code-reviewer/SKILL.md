@@ -1,6 +1,6 @@
 ---
 name: hmos-code-reviewer
-description: 鸿蒙(HarmonyOS)代码AI检视技能。当用户需要：(1) 检视鸿蒙/ArkTS代码文件或目录，(2) 进行代码质量审查，(3) 发现代码中的潜在问题，(4) 生成代码检视报告时使用此技能。支持指定文件或目录进行深度AI代码检视，输出CSV格式的检视报告。触发短语："检视代码"、"代码审查"、"review鸿蒙代码"、"检查这个目录的代码"。
+description: 鸿蒙(HarmonyOS)/ArkTS 代码 AI 检视技能。当用户需要检视、审查、检查鸿蒙代码时使用此技能。触发场景包括：检视单个 .ets/.ts 文件、审查目录或项目代码、发现代码问题、生成检视报告。即使用户没有明确说"检视"，只要是关于鸿蒙代码质量、问题排查、代码优化的请求，都应使用此技能。触发短语："检视代码"、"代码审查"、"review代码"、"检查代码"、"帮我看看这段代码"、"代码有什么问题"、"鸿蒙代码扫描"、"ArkTS代码检查"、"这个组件有问题吗"、"帮我审查一下"。
 ---
 
 # 鸿蒙代码 AI 检视技能
@@ -133,7 +133,26 @@ background_output(task_id="[task_id]")
 "空指针风险","/path/to/file.ets","42-45","High","安全性-空值检查"
 ```
 
-### 6.2 保存报告文件
+### 6.2 使用合并脚本（可选）
+
+如果生成了多个 CSV 报告文件，可以使用 `scripts/merge_reports.py` 脚本合并：
+
+```bash
+# 合并目录下所有 CSV 文件
+python scripts/merge_reports.py ./reports/
+
+# 合并指定文件
+python scripts/merge_reports.py report1.csv report2.csv -o final_report.csv
+```
+
+脚本功能：
+- 自动读取并合并多个 CSV 报告
+- 去除重复问题
+- 按严重程度排序（Critical > High > Medium > Low）
+- 生成统计摘要
+- 输出合并后的报告
+
+### 6.3 保存报告文件
 
 将最终报告保存到用户指定位置或当前工作目录：
 
