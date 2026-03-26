@@ -1,0 +1,26 @@
+{
+  "skill_name": "harmonyos-local-test-writer",
+  "evals": [
+    {
+      "id": 1,
+      "name": "simple-calculator-test",
+      "prompt": "我需要为我的 Calculator 类编写单元测试。这个类有 add、subtract、multiply、divide 四个方法。请帮我在 entry/src/test/ets/utils/ 目录下创建 Calculator.test.ets 文件。需要测试正常情况、边界情况和错误情况。",
+      "expected_output": "创建完整的测试文件,包含: 1) 正确的文件位置和命名; 2) 四个方法的测试用例; 3) 正常、边界和错误情况的测试; 4) 使用 Hypium 框架的正确语法",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "mock-api-service-test",
+      "prompt": "我的 UserService 依赖 ApiService 来获取用户数据。请帮我写一个测试文件来测试 UserService,需要 mock ApiService 的 fetchData 方法,让它返回测试数据而不是真实调用 API。测试文件应该放在 entry/src/test/ets/services/UserService.test.ets",
+      "expected_output": "创建使用 MockKit 的测试文件,包含: 1) 正确的 mock 设置; 2) when().afterReturn() 语法的使用; 3) 在 afterEach 中清理 mock; 4) 测试 UserService 的业务逻辑而不是 ApiService",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "async-promise-test",
+      "prompt": "我有一个异步函数 asyncProcessData,它返回一个 Promise。请帮我写测试用例来测试这个函数,包括成功的情况和失败的情况。还需要测试 Promise 是否在预期的时间内完成(性能测试)。文件位置: entry/src/test/ets/utils/DataProcessor.test.ets",
+      "expected_output": "创建包含异步测试的文件,包含: 1) 使用 async/await 的测试用例; 2) 测试成功和失败的 Promise 状态; 3) 使用 assertPromiseIsResolved/assertPromiseIsRejected; 4) 性能测试断言(duration < threshold)",
+      "files": []
+    }
+  ]
+}

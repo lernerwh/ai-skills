@@ -1,0 +1,23 @@
+[
+  {"query": "运行鸿蒙本地测试", "should_trigger": true},
+  {"query": "hvigorw test 报错 SDK component missing", "should_trigger": true},
+  {"query": "怎么在命令行运行 HarmonyOS 单元测试", "should_trigger": true},
+  {"query": "CI/CD 中执行 hypium 测试", "should_trigger": true},
+  {"query": "ArkTS 本地单元测试怎么跑", "should_trigger": true},
+  {"query": "hvigorw 找不到 test 任务", "should_trigger": true},
+  {"query": "DEVECO_SDK_HOME 设置问题导致测试失败", "should_trigger": true},
+  {"query": "帮我运行 entry 模块的本地测试", "should_trigger": true},
+  {"query": "鸿蒙项目测试覆盖率报告在哪", "should_trigger": true},
+  {"query": "DevEco Studio 命令行跑测试", "should_trigger": true},
+
+  {"query": "鸿蒙应用开发入门教程", "should_trigger": false},
+  {"query": "ArkTS 语法学习", "should_trigger": false},
+  {"query": "如何创建 HarmonyOS 项目", "should_trigger": false},
+  {"query": "Android 单元测试怎么写", "should_trigger": false},
+  {"query": "iOS XCTest 使用方法", "should_trigger": false},
+  {"query": "DevEco Studio 下载安装", "should_trigger": false},
+  {"query": "HAP 包怎么打包", "should_trigger": false},
+  {"query": "HarmonyOS 应用签名配置", "should_trigger": false},
+  {"query": "编写一个函数实现两数相加", "should_trigger": false},
+  {"query": "如何调试鸿蒙应用", "should_trigger": false}
+]
