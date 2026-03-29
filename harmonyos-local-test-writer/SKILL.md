@@ -1,7 +1,8 @@
 ---
 name: harmonyos-local-test-writer
-description: Use when writing HarmonyOS/ArkTS local unit test cases with Hypium framework. Triggers when user asks to write tests, create test cases, add unit tests for HarmonyOS/ArkTS code. Also use when user mentions: 写测试用例, 编写测试, unit test, Hypium, 本地测试代码, test.ets, mock test, 测试覆盖, test coverage, 为...写测试, 给...添加测试, 如何测试, test a function, 测试某个方法. Use proactively even if user doesn't explicitly say "test" but wants to verify code correctness, add test files, or improve code quality through testing.
+description: Use when writing HarmonyOS/ArkTS local unit test cases with Hypium framework. Triggers when user asks to write tests, create test cases, add unit tests for HarmonyOS/ArkTS code. Also use when user mentions: 写测试用例, 编写测试, unit test, Hypium, 本地测试代码, test.ets, mock test, 测试覆盖, test coverage, 为...写测试, 给...添加测试, 如何测试, test a function, 测试某个方法, TDD, 测试驱动. Use proactively even if user doesn't explicitly say "test" but wants to verify code correctness, add test files, or improve code quality through testing.
 ---
+<!-- References: assertion-api.md, mock-templates.md -->
 
 # HarmonyOS Local Unit Test Writer
 
@@ -23,690 +24,454 @@ Typical workflow:
 
 | Test Type | Directory | Purpose |
 |-----------|-----------|---------|
-| Local Unit Test | `entry/src/test/ets/` | Pure logic tests, no UI dependency |
+| Local Unit Test | `entry/src/test/` | Pure logic tests, no UI dependency |
 | UI/Ability Test | `entry/src/ohosTest/ets/test/` | Tests requiring ability context |
+
+```
+entry/src/test/
+├── List.test.ets                  # Test registry (MUST exist)
+├── *.test.ets                     # Individual test files
+└── mock/
+    ├── MockRdbStore.ets           # Shared database mock
+    └── MockPreferences.ets        # Shared preferences mock
+```
+
+## Test Registration (CRITICAL)
+
+Every `.test.ets` file MUST be registered in `List.test.ets`. Without registration, the test framework will not discover or execute your tests.
+
+### How Registration Works
+
+1. In your test file, export a default function:
+```typescript
+export default function myFeatureTest() {
+  describe('MyFeature', () => {
+    // ... test cases
+  });
+}
+```
+
+2. In `List.test.ets`, import and call it:
+```typescript
+import myFeatureTest from './MyFeature.test';
+
+export default function testsuite() {
+  // ... other tests
+  myFeatureTest();  // This line is mandatory
+}
+```
+
+Forgetting this step is the #1 reason tests silently don't run. Always verify List.test.ets after creating a new test file.
+
+## ArkTS Testing Limitations
+
+ArkTS is NOT TypeScript. These constraints catch many developers off guard:
+
+| Limitation | Workaround |
+|------------|------------|
+| Cannot mock `Context` | Pass `as object` or use empty class |
+| Cannot create Fake system services | Build in-memory mocks (see Mock Patterns) |
+| No `Partial<T>` | Use `ValuesBucket = {}` with explicit keys |
+| No `Record<string, any>` | Use `Map<string, T>` or `ValuesBucket` |
+| Strict type checking | Use `as object` for dependency injection |
+| `export default function` required | Always wrap `describe()` in `export default function` |
+| No spread on interface | Use manual copy functions or factory functions |
+| No dynamic property access on typed objects | Use `ValuesBucket` |
 
 ## Basic Test Structure
 
 ```typescript
 import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
 
-export default function myTest() {
-  describe('MyTestSuite', () => {
-    // Runs once before all tests
-    beforeAll(() => {
-      // Setup shared resources
-    });
+export default function mediumTest() {
+  describe('Medium', () => {
+    beforeAll(() => { /* Setup shared resources */ });
+    beforeEach(() => { /* Reset test state */ });
+    afterEach(() => { /* Cleanup */ });
+    afterAll(() => { /* Release shared resources */ });
 
-    // Runs before each test
-    beforeEach(() => {
-      // Reset test state
-    });
+    it('should create Medium with correct properties', 0, () => {
+      // Given
+      const medium = new Medium();
+      medium.name = 'photo.jpg';
 
-    // Runs after each test
-    afterEach(() => {
-      // Cleanup after each test
-    });
-
-    // Runs once after all tests
-    afterAll(() => {
-      // Release shared resources
-    });
-
-    it('testCaseName', 0, () => {
-      // Test logic here
-      expect(actual).assertEqual(expected);
+      // Then
+      expect(medium.name).assertEqual('photo.jpg');
     });
   });
 }
 ```
 
-## Core APIs
-
-### Test Lifecycle
-
-| API | Description |
-|-----|-------------|
-| `describe(name, fn)` | Define a test suite |
-| `it(name, filter, fn)` | Define a test case (filter usually 0) |
-| `beforeAll(fn)` | Run once before all tests |
-| `beforeEach(fn)` | Run before each test |
-| `afterEach(fn)` | Run after each test |
-| `afterAll(fn)` | Run once after all tests |
-| `xdescribe(name, fn)` | Skip entire suite |
-| `xit(name, filter, fn)` | Skip specific test |
-
-### Assertion Methods
-
-| Method | Description | Example |
-|--------|-------------|---------|
-| `assertEqual(val)` | Strict equality | `expect(a).assertEqual(b)` |
-| `assertContain(val)` | String/array contains | `expect('abc').assertContain('b')` |
-| `assertTrue()` | Value is true | `expect(flag).assertTrue()` |
-| `assertFalse()` | Value is false | `expect(flag).assertFalse()` |
-| `assertNull()` | Value is null | `expect(val).assertNull()` |
-| `assertUndefined()` | Value is undefined | `expect(val).assertUndefined()` |
-| `assertLarger(val)` | Greater than | `expect(5).assertLarger(3)` |
-| `assertLess(val)` | Less than | `expect(3).assertLess(5)` |
-| `assertInstanceOf(type)` | Type check | `expect('str').assertInstanceOf('String')` |
-| `assertNaN()` | Is NaN | `expect(NaN).assertNaN()` |
-| `assertClose(expected, precision)` | Approximate equality | `expect(1.01).assertClose(1, 0.1)` |
-| `assertDeepEquals(val)` | Deep equality for objects/arrays | `expect(obj1).assertDeepEquals(obj2)` |
-| `assertFail()` | Always fail | `expect().assertFail()` |
-| `assertThrowError(msg)` | Expects error to be thrown | `expect(fn).assertThrowError('Error msg')` |
-| `not()` | Negate assertion | `expect(1).not().assertEqual(2)` |
-| `message(msg)` | Custom error message | `expect(1).message('Should be 2').assertEqual(2)` |
-
-### Promise Assertions
-
-```typescript
-// Promise state assertions
-expect(promise).assertPromiseIsPending();
-expect(promise).assertPromiseIsResolved();
-expect(promise).assertPromiseIsRejected();
-
-// Promise with value assertions
-expect(promise).assertPromiseIsResolvedWith(expectedValue);
-expect(promise).assertPromiseIsRejectedWith(expectedValue);
-expect(promise).assertPromiseIsRejectedWithError(ErrorType, 'message');
-```
+For the full list of lifecycle APIs, assertion methods, and Promise assertions, see `references/assertion-api.md`.
 
 ## Writing Test Cases
 
-### Step 1: Identify Test Target
+### Given-When-Then Style (Recommended)
 
-Before writing tests, identify:
-1. What function/class to test
-2. What inputs to test (normal, edge cases, error cases)
-3. Expected outputs for each input
+Structure each test with clear Given/When/Then comments — it makes test intent obvious at a glance:
 
-### Step 2: Create Test File
+```typescript
+it('should return READY state when all dependencies are ready', 0, async () => {
+  // Given: all dependencies ready
+  setup.permissionChecker.hasPermission = true;
 
-Follow naming convention: `<TargetName>.test.ets`
+  // When: call initialize
+  const result: StartupResult = await service.initialize(setup.context as object);
 
-```
-entry/src/test/ets/
-├── utils/
-│   ├── Calculator.test.ets    # Tests for Calculator.ets
-│   └── StringHelper.test.ets  # Tests for StringHelper.ets
-└── List.test.ets
+  // Then: returns READY state
+  expect(result.state).assertEqual(InitializationState.READY);
+});
 ```
 
-### Step 3: Write Test Cases
+### Steps to Create a Test
 
+1. **Identify** what to test — function/class, inputs (normal, edge, error), expected outputs
+2. **Create file** — `<TargetName>.test.ets` in `entry/src/test/`
+3. **Write cases** — use `export default function` wrapper, `describe`/`it` structure
+4. **Register** — add import and call to `List.test.ets` (see Test Registration above)
+
+Example:
 ```typescript
 import { describe, it, expect, beforeEach } from '@ohos/hypium';
 
-export default function calculatorTest() {
-  describe('Calculator', () => {
-    let calc: Calculator;
+export default function mediumTest() {
+  describe('Medium', () => {
+    let medium: Medium;
 
     beforeEach(() => {
-      calc = new Calculator();
+      medium = new Medium();
+      medium.name = 'photo.jpg';
     });
 
-    it('should add two numbers correctly', 0, () => {
-      expect(calc.add(2, 3)).assertEqual(5);
-    });
-
-    it('should handle negative numbers', 0, () => {
-      expect(calc.add(-1, -2)).assertEqual(-3);
-    });
-
-    it('should throw error for invalid input', 0, () => {
-      expect(() => calc.add('a' as any, 1)).assertThrowError('Invalid input');
+    it('should have correct default properties', 0, () => {
+      expect(medium.isFavorite).assertFalse();
+      expect(medium.deletedTS).assertEqual(0);
     });
   });
 }
 ```
 
-## Mock Capabilities
+## Mock Patterns (4 Proven Approaches)
 
-Use MockKit when testing code with dependencies.
+Use these battle-tested patterns from real HarmonyOS projects. For complete mock implementations you can copy into your project, see `references/mock-templates.md`.
+
+### Pattern A: Hand-written Mock (implements Interface)
+
+**Best for:** DAO layer, repository interfaces
+
+Define a mock class in your test file that implements the target interface. Use an in-memory array to simulate storage:
 
 ```typescript
-import { describe, it, expect, MockKit, when } from '@ohos/hypium';
+class MockMediumDao implements MediumDao {
+  private media: Array<Medium> = [];
 
-class ApiService {
-  fetchData(): string {
-    return 'real data';
+  setTestData(media: Array<Medium>): void { this.media = media; }
+  getAllData(): Array<Medium> { return this.media; }
+
+  async getMediaFromPath(path: string): Promise<Array<Medium>> {
+    return this.media.filter(m =>
+      m.parentPath.toLowerCase() === path.toLowerCase() && m.deletedTS === 0
+    );
+  }
+
+  async insert(medium: Medium): Promise<void> {
+    const index = this.media.findIndex(m =>
+      m.path.toLowerCase() === medium.path.toLowerCase()
+    );
+    if (index >= 0) {
+      this.media[index] = medium;
+    } else {
+      this.media.push(medium);
+    }
+  }
+
+  // ... implement remaining interface methods
+}
+```
+
+### Pattern B: Stub with Behavior Verification
+
+**Best for:** Service layer tests, verifying call sequences and error handling
+
+Create Stub classes with `shouldFail` flag and `callOrder` tracking. Use a global counter to verify execution order:
+
+```typescript
+let globalOrderCounter: number = 0;
+function nextOrder(): number { globalOrderCounter++; return globalOrderCounter; }
+
+class StubDatabaseHelper {
+  public shouldFail: boolean = false;
+  public callOrder: number[] = [];
+
+  async init(_context: object): Promise<void> {
+    this.callOrder.push(nextOrder());
+    if (this.shouldFail) {
+      throw new Error('Database init failed');
+    }
   }
 }
 
-export default function serviceTest() {
-  describe('ServiceTest with Mock', () => {
-    it('should return mocked data', 0, () => {
-      const mocker = new MockKit();
-      const api = new ApiService();
+class StubPermissionChecker {
+  public hasPermission: boolean = true;
+  public callOrder: number[] = [];
 
-      // Mock the method
-      const mockFn = mocker.mockFunc(api, api.fetchData);
-
-      // Define mock behavior
-      when(mockFn)().afterReturn('mocked data');
-
-      // Test with mocked data
-      expect(api.fetchData()).assertEqual('mocked data');
-
-      // Cleanup
-      mocker.clear(api);
-    });
-  });
+  async checkMediaPermission(): Promise<boolean> {
+    this.callOrder.push(nextOrder());
+    return this.hasPermission;
+  }
 }
+
+// Assembly class ties everything together
+class ServiceSetup {
+  dbHelper: StubDatabaseHelper = new StubDatabaseHelper();
+  permissionChecker: StubPermissionChecker = new StubPermissionChecker();
+  context: TestContext = new TestContext();
+
+  createService(): StartupService {
+    return new StartupService(
+      this.dbHelper as object,
+      this.prefsHelper as object,
+      this.permissionChecker as object
+    );
+  }
+}
+
+// In tests — verify call order
+beforeEach(() => { globalOrderCounter = 0; });
+
+it('should verify initialization call order', 0, async () => {
+  await service.initialize(setup.context as object);
+
+  expect(setup.dbHelper.callOrder[0]).assertEqual(1);       // db first
+  expect(setup.permissionChecker.callOrder[0]).assertEqual(3); // permission third
+});
 ```
 
-### Mock APIs
+### Pattern C: Shared Mock Files (mock/ directory)
 
-| API | Description |
-|-----|-------------|
-| `new MockKit()` | Create mock kit instance |
-| `mockFunc(obj, method)` | Mock a method on object |
-| `when(mockFn)(...args)` | Set up expectation with args |
-| `afterReturn(value)` | Return specified value |
-| `afterReturnNothing()` | Return undefined |
-| `afterAction(fn)` | Execute custom function |
-| `afterThrow(msg)` | Throw error |
-| `verify(name, args).times(n)` | Verify call count |
-| `clear(obj)` | Restore mocked object |
-| `clearAll()` | Clear all mocks |
+**Best for:** Cross-suite reusable mocks (database, preferences, etc.)
 
-### Argument Matchers
+Place shared mocks in `entry/src/test/mock/` as independent `.ets` files. Each includes a singleton factory with `reset()` support.
+
+For the complete MockRdbStore and MockPreferences implementations (ready to copy into your project), see `references/mock-templates.md`.
+
+Usage in test files:
+```typescript
+import { MockRdbStore } from './mock/MockRdbStore';
+import { MockPreferences } from './mock/MockPreferences';
+
+let mockStore: MockRdbStore;
+let mockPrefs: MockPreferences;
+
+beforeEach(() => {
+  mockStore = new MockRdbStore('my_db.db', 1);
+  mockStore.createTable('settings');
+  mockStore.createTable('media');
+  mockPrefs = new MockPreferences('my_prefs');
+});
+
+afterEach(() => {
+  MockRdbStoreFactory.reset();
+  MockPreferencesFactory.reset();
+});
+```
+
+### Pattern D: `as object` Dependency Injection
+
+**Best for:** Bypassing ArkTS strict type checking for constructor injection
+
+When a service expects typed dependencies, use `as object` to inject stubs. This is necessary because ArkTS enforces structural typing strictly — a Stub class with compatible methods but no inheritance will fail type checks. `as object` bypasses the compile-time check, and the runtime calls methods by name (duck typing).
 
 ```typescript
-import { MockKit, ArgumentMatchers } from '@ohos/hypium';
-
-when(mockFn)(ArgumentMatchers.anyString).afterReturn('matched');
-when(mockFn)(ArgumentMatchers.anyNumber).afterReturn('number matched');
-when(mockFn)(ArgumentMatchers.any).afterReturn('any matched');
+// The service expects typed dependencies
+const service = new StartupService(
+  setup.dbHelper as object,         // Bypasses type check
+  setup.prefsHelper as object,
+  setup.permissionChecker as object
+);
 ```
 
 ## Common Patterns
 
-### Testing Async Code
+### Singleton Reset (Essential for Test Isolation)
+
+If a class has a `static getInstance()` method, it carries state across tests. Always reset it in `beforeEach` and `afterEach` — otherwise Test A's state silently leaks into Test B, causing flaky "works alone, fails together" failures.
 
 ```typescript
-it('async test with done', 0, (done: Function) => {
-  setTimeout(() => {
-    expect(result).assertEqual(expected);
-    done();
-  }, 1000);
-});
+describe('DatabaseHelper', () => {
+  beforeEach(() => {
+    DatabaseHelper.resetInstance();
+    helper = DatabaseHelper.getInstance();
+  });
 
-it('promise test', 0, async () => {
-  const result = await asyncFunction();
-  expect(result).assertEqual(expected);
+  afterEach(() => {
+    DatabaseHelper.resetInstance();
+  });
 });
 ```
 
-### Testing Array/Collection
+### Async Mock Pattern
+
+For async interfaces, return Promise directly or use `async/await`:
 
 ```typescript
-it('array test', 0, () => {
-  const arr = [1, 2, 3];
-  expect(arr.length).assertEqual(3);
-  expect(arr).assertContain(2);
+// Simulate async failure
+class StubDatabaseHelper {
+  async init(_context: object): Promise<void> {
+    if (this.shouldFail) {
+      throw new Error(this.errorMessage);
+    }
+  }
+}
+
+// Explicit Promise.resolve()
+class MockPreferences {
+  flushAsync(): Promise<void> { return Promise.resolve(); }
+}
+
+// In tests, always use async/await
+it('should handle async operations', 0, async () => {
+  const result = await service.initialize(context as object);
+  expect(result.state).assertEqual(InitializationState.READY);
+});
+```
+
+### ValuesBucket / HarmonyOS Test Data
+
+Use `ValuesBucket` from `@kit.ArkData` for database-related test data — it's the only way to do dynamic property access in ArkTS:
+
+```typescript
+import { ValuesBucket } from '@kit.ArkData';
+
+function createSettingsValues(key: string, value: string, updatedAt: number): ValuesBucket {
+  const bucket: ValuesBucket = {};
+  bucket['key'] = key;
+  bucket['value'] = value;
+  bucket['updated_at'] = updatedAt;
+  return bucket;
+}
+
+// Usage
+const values = createSettingsValues('theme', 'dark', Date.now());
+mockStore.insert('settings', values);
+const results = mockStore.query('settings');
+expect(results[0]['key']).assertEqual('theme');
+```
+
+### Enum and Constant Verification
+
+```typescript
+it('should have correct enum values', 0, () => {
+  expect(InitializationState.READY).assertEqual(0);
+  expect(InitializationState.ERROR).assertEqual(3);
 });
 
-it('map deep equality', 0, () => {
-  const map1 = new Map([[1, 'a']]);
-  const map2 = new Map([[1, 'a']]);
-  expect(map1).assertDeepEquals(map2);
+it('should define all required constants', 0, () => {
+  expect(Constants.SETTINGS_TABLE).assertEqual('settings');
 });
 ```
 
 ### Skip Tests
 
 ```typescript
-// Skip entire suite
-xdescribe('SkippedSuite', () => {
-  it('wont run', 0, () => {});
-});
-
-// Skip single test
-it('normal test', 0, () => {});
+xdescribe('SkippedSuite', () => { it('wont run', 0, () => {}); });
 xit('skipped test', 0, () => {});
-```
-
-### Error Handling
-
-```typescript
-// Test error throwing
-it('should throw error for invalid input', 0, () => {
-  expect(() => divide(10, 0)).assertThrowError('Division by zero');
-});
-
-// Test error with try-catch
-it('should handle errors gracefully', 0, async () => {
-  try {
-    await fetchData();
-    expect().assertFail(); // Should not reach here
-  } catch (error) {
-    expect(error.message).assertContain('Network error');
-  }
-});
-
-// Test error type
-it('should throw TypeError', 0, () => {
-  expect(() => process(null)).assertThrowError('TypeError');
-});
-```
-
-### Performance Testing
-
-```typescript
-it('should complete within 100ms', 0, async () => {
-  const start = Date.now();
-  await performTask();
-  const duration = Date.now() - start;
-  expect(duration).assertLess(100);
-});
-
-it('should handle large datasets efficiently', 0, () => {
-  const largeArray = Array(10000).fill(0);
-  const start = Date.now();
-  processArray(largeArray);
-  const duration = Date.now() - start;
-  expect(duration).assertLess(1000); // Should complete in 1 second
-});
 ```
 
 ## Advanced Patterns
 
-### Test Fixtures
+### Test Fixtures (HarmonyOS Style)
 
-Use fixtures to manage complex test setup and teardown:
+Use a setup function that creates a fresh mock store and resets singletons:
 
 ```typescript
-class DatabaseFixture {
-  private db: Database;
-
-  async setup(): Promise<Database> {
-    this.db = new Database(':memory:');
-    await this.db.initialize();
-    return this.db;
-  }
-
-  async teardown(): Promise<void> {
-    await this.db.close();
-  }
-
-  async clear(): Promise<void> {
-    await this.db.clearAllTables();
-  }
+function setupMockStore(): SetupResult {
+  const result = new SetupResult();
+  DatabaseHelper.resetInstance();
+  result.helper = DatabaseHelper.getInstance();
+  result.mockStore = new MockRdbStore('simple_gallery.db', DATABASE_VERSION);
+  result.mockStore.createTable('settings');
+  result.mockStore.createTable('media');
+  return result;
 }
 
-export default function databaseTest() {
-  describe('DatabaseTest', () => {
-    let fixture: DatabaseFixture;
-    let db: Database;
-
-    beforeAll(async () => {
-      fixture = new DatabaseFixture();
-      db = await fixture.setup();
-    });
-
-    afterAll(async () => {
-      await fixture.teardown();
-    });
-
-    beforeEach(async () => {
-      await fixture.clear();
-    });
-
-    it('should insert user', 0, async () => {
-      await db.insertUser({ name: 'Alice' });
-      const users = await db.getAllUsers();
-      expect(users.length).assertEqual(1);
-    });
+describe('DatabaseHelper', () => {
+  beforeEach(() => {
+    const setup = setupMockStore();
+    helper = setup.helper!;
+    mockStore = setup.mockStore!;
   });
-}
+  afterEach(() => { DatabaseHelper.resetInstance(); });
+});
 ```
 
 ### Parameterized Tests
 
-Test multiple inputs with the same logic:
-
 ```typescript
-// Simple parameterization
-const testCases = [
-  { input: 1, expected: 1 },
-  { input: 2, expected: 4 },
-  { input: 3, expected: 9 },
-  { input: -1, expected: 1 },
-  { input: 0, expected: 0 }
+const formatTestCases = [
+  { input: 'photo.jpg', expected: 'image' },
+  { input: 'video.mp4', expected: 'video' },
+  { input: 'doc.pdf', expected: 'unknown' },
 ];
 
-testCases.forEach(({ input, expected }) => {
-  it(`should square ${input} to ${expected}`, 0, () => {
-    expect(square(input)).assertEqual(expected);
-  });
-});
-
-// Complex parameterization
-interface TestCase {
-  description: string;
-  input: string;
-  expected: boolean;
-}
-
-const validationTests: TestCase[] = [
-  { description: 'valid email', input: 'user@example.com', expected: true },
-  { description: 'missing @', input: 'userexample.com', expected: false },
-  { description: 'empty string', input: '', expected: false },
-  { description: 'null value', input: null, expected: false }
-];
-
-validationTests.forEach(({ description, input, expected }) => {
-  it(`should validate email: ${description}`, 0, () => {
-    expect(isValidEmail(input)).assertEqual(expected);
-  });
-});
-```
-
-### Test Data Factories
-
-Create reusable test data generators:
-
-```typescript
-// Factory function
-function createTestUser(overrides: Partial<User> = {}): User {
-  return {
-    id: 1,
-    name: 'Test User',
-    email: 'test@example.com',
-    age: 25,
-    ...overrides
-  };
-}
-
-// Usage in tests
-it('should process adult user', 0, () => {
-  const user = createTestUser({ age: 30 });
-  expect(canAccessAdultContent(user)).assertTrue();
-});
-
-it('should reject minor user', 0, () => {
-  const user = createTestUser({ age: 15 });
-  expect(canAccessAdultContent(user)).assertFalse();
-});
-
-// Factory with relationships
-function createTestPost(overrides: Partial<Post> = {}): Post {
-  const author = createTestUser();
-  return {
-    id: 1,
-    title: 'Test Post',
-    content: 'Test content',
-    author,
-    createdAt: new Date(),
-    ...overrides
-  };
-}
-```
-
-### Testing Event Listeners
-
-```typescript
-it('should emit event when data changes', 0, () => {
-  const emitter = new EventEmitter();
-  let eventFired = false;
-
-  emitter.on('dataChanged', (data) => {
-    eventFired = true;
-    expect(data).assertEqual('new data');
-  });
-
-  emitter.emit('dataChanged', 'new data');
-  expect(eventFired).assertTrue();
-});
-
-// Testing callback removal
-it('should not fire after listener removed', 0, () => {
-  const emitter = new EventEmitter();
-  let callCount = 0;
-
-  const handler = () => callCount++;
-  emitter.on('test', handler);
-  emitter.emit('test');
-  expect(callCount).assertEqual(1);
-
-  emitter.off('test', handler);
-  emitter.emit('test');
-  expect(callCount).assertEqual(1); // Should still be 1
-});
-```
-
-### Testing Callbacks
-
-```typescript
-it('should call callback with result', 0, (done: Function) => {
-  fetchData((result: string) => {
-    expect(result).assertEqual('success');
-    done();
-  });
-});
-
-it('should handle callback errors', 0, (done: Function) => {
-  fetchWithError((error: Error, result: string) => {
-    expect(error).assertNotNull();
-    expect(result).assertNull();
-    done();
+formatTestCases.forEach(({ input, expected }) => {
+  it(`should classify ${input} as ${expected}`, 0, () => {
+    expect(classifyMedia(input)).assertEqual(expected);
   });
 });
 ```
 
 ## Best Practices
 
-1. **One assertion per test** - Keep tests focused
-2. **Descriptive names** - `shouldReturnSumWhenAddingTwoNumbers`
-3. **Test edge cases** - Empty input, null, max values
-4. **Isolate tests** - Don't share state between tests
-5. **Use beforeEach** - Reset state before each test
-6. **Clean up mocks** - Always call `mocker.clear()` or `clearAll()`
-7. **Use factories** - Create reusable test data generators for consistency
-8. **Test behavior, not implementation** - Focus on what the code does, not how
+1. **One assertion per test** — focused tests are easier to debug
+2. **Descriptive names** — `should <expected> when <condition>`
+3. **Test edge cases** — empty input, null, boundary values
+4. **Isolate tests** — reset singletons in `afterEach`
+5. **Register in List.test.ets** — every test file must be imported and called there
+6. **Use `as object` for DI** — the standard way to bypass ArkTS strict typing
+7. **Use Given-When-Then comments** — makes test intent clear
+8. **Prefer hand-written mocks over MockKit** — more reliable in ArkTS environment
 
 ## Common Pitfalls
 
-### ❌ Pitfall 1: Forgetting to Clean Up Mocks
+### Forgetting to Register in List.test.ets
+Test file exists but tests never run. Always add import + call to List.test.ets.
 
+### Singleton Not Reset Between Tests
+State from Test A leaks into Test B. Add `Xxx.resetInstance()` in `afterEach`.
+
+### Not Waiting for Async Operations
 ```typescript
-// ❌ BAD: Mock persists across tests
-it('test1', 0, () => {
-  const mocker = new MockKit();
-  mocker.mockFunc(api, api.fetchData);
-  // ... test code
-  // Missing: mocker.clear(api)
-});
-
-// ✅ GOOD: Always clean up mocks
-let mocker: MockKit;
-
-beforeEach(() => {
-  mocker = new MockKit();
-});
-
-afterEach(() => {
-  mocker.clearAll();
-});
-
-it('test1', 0, () => {
-  mocker.mockFunc(api, api.fetchData);
-  // ... test code
-  // Mock will be cleaned in afterEach
-});
+// BAD: assertion never runs
+it('test', 0, () => { fetchData().then(r => expect(r).assertEqual('x')); });
+// GOOD: use async/await
+it('test', 0, async () => { expect(await fetchData()).assertEqual('x'); });
 ```
 
-### ❌ Pitfall 2: Not Waiting for Async Operations
+### Using TypeScript Features Not Available in ArkTS
+No `Partial<T>`, no `Record<string, any>`, no spread on interfaces. Use `ValuesBucket` for dynamic data.
 
-```typescript
-// ❌ BAD: Test finishes before async completes
-it('should fetch data', 0, () => {
-  fetchData().then(result => {
-    expect(result).assertEqual('data'); // Never runs!
-  });
-});
+### Trying to Mock System Context
+Cannot create real `Context` in unit tests. Use `class TestContext {}` and pass `as object`.
 
-// ✅ GOOD: Use async/await
-it('should fetch data', 0, async () => {
-  const result = await fetchData();
-  expect(result).assertEqual('data');
-});
-
-// ✅ GOOD: Use done callback
-it('should fetch data', 0, (done: Function) => {
-  fetchData().then(result => {
-    expect(result).assertEqual('data');
-    done();
-  });
-});
-```
-
-### ❌ Pitfall 3: Tests Depend on Execution Order
-
-```typescript
-// ❌ BAD: Tests share mutable state
-let user: User;
-
-it('test1', 0, () => {
-  user = { name: 'Alice' };
-  expect(user.name).assertEqual('Alice');
-});
-
-it('test2', 0, () => {
-  // Assumes test1 ran first
-  expect(user.name).assertEqual('Alice'); // Flaky!
-});
-
-// ✅ GOOD: Each test is independent
-beforeEach(() => {
-  user = { name: 'Alice' };
-});
-
-it('test1', 0, () => {
-  user.name = 'Bob';
-  expect(user.name).assertEqual('Bob');
-});
-
-it('test2', 0, () => {
-  // Fresh state from beforeEach
-  expect(user.name).assertEqual('Alice');
-});
-```
-
-### ❌ Pitfall 4: Testing Implementation Details
-
-```typescript
-// ❌ BAD: Testing internal state
-it('should process data', 0, () => {
-  const processor = new DataProcessor();
-  processor.process('data');
-  expect(processor._internalCounter).assertEqual(1); // Fragile!
-});
-
-// ✅ GOOD: Testing observable behavior
-it('should return processed result', 0, () => {
-  const processor = new DataProcessor();
-  const result = processor.process('data');
-  expect(result.status).assertEqual('success');
-});
-```
-
-### ❌ Pitfall 5: Overly Complex Tests
-
-```typescript
-// ❌ BAD: Multiple responsibilities in one test
-it('should do everything', 0, async () => {
-  const user = await createUser();
-  const order = await createOrder(user);
-  const payment = await processPayment(order);
-  await sendEmail(user, payment);
-  await updateInventory(order);
-  // Too many things to fail!
-});
-
-// ✅ GOOD: One concept per test
-it('should create user with valid data', 0, async () => {
-  const user = await createUser({ name: 'Alice' });
-  expect(user.id).assertNotNull();
-  expect(user.name).assertEqual('Alice');
-});
-```
-
-### ❌ Pitfall 6: Hard-Coded Test Data
-
-```typescript
-// ❌ BAD: Hard-coded values everywhere
-it('test1', 0, () => {
-  const user = { id: 1, name: 'Alice', email: 'alice@test.com' };
-  // ...
-});
-
-it('test2', 0, () => {
-  const user = { id: 1, name: 'Alice', email: 'alice@test.com' };
-  // ...
-});
-
-// ✅ GOOD: Use test data factory
-function createTestUser(overrides = {}) {
-  return {
-    id: 1,
-    name: 'Alice',
-    email: 'alice@test.com',
-    ...overrides
-  };
-}
-
-it('test1', 0, () => {
-  const user = createTestUser();
-  // ...
-});
-
-it('test2', 0, () => {
-  const user = createTestUser({ name: 'Bob' });
-  // ...
-});
-```
-
-## Running Tests
-
-```bash
-# Run all local unit tests
-hvigorw test -p module=entry@default --no-daemon
-
-# Run specific test suite
-hvigorw test -p module=entry@default -p scope=MyTestSuite
-
-# Run specific test case
-hvigorw test -p module=entry@default -p scope=MyTestSuite#testCaseName
-```
+### Tests Depend on Execution Order
+Don't share mutable state between tests. Use `beforeEach` to reset.
 
 ## Checklist for Writing Tests
 
 - [ ] Import required APIs from `@ohos/hypium`
-- [ ] Create test file in correct directory (`src/test/ets/` for local tests)
+- [ ] Create test file in `entry/src/test/`
 - [ ] Use `export default function` wrapper
-- [ ] Use descriptive test suite and case names
+- [ ] Register in `List.test.ets` (import + call)
+- [ ] Use descriptive suite and case names
 - [ ] Include positive, negative, and edge case tests
-- [ ] Clean up resources in `afterEach`/`afterAll`
-- [ ] Clean up mocks if used
+- [ ] Reset singletons in `beforeEach`/`afterEach`
+- [ ] Use `as object` for dependency injection
+- [ ] Verify registration: List.test.ets contains import and function call
 
 ## Test Coverage
 
-Tests generate coverage reports showing how much of your code is tested.
-
-### Coverage Report Location
-
-```
-entry/.test/default/outputs/test/reports/index.html
-```
-
-Open this HTML file in a browser to see:
-- Line coverage: Which lines of code were executed
-- Function coverage: Which functions were called
-- Branch coverage: Which conditional branches were taken
-
-### Running Tests with Coverage
+Coverage reports are at `entry/.test/default/outputs/test/reports/index.html`.
 
 ```bash
 # Run with coverage (default)
@@ -716,49 +481,6 @@ hvigorw test -p module=entry@default --no-daemon
 hvigorw test -p module=entry@default -p coverage=false --no-daemon
 ```
 
-### Coverage Targets
+Good targets: Functions >80%, Branches >70%, Statements >80%.
 
-Good coverage goals for a healthy codebase:
-
-| Metric | Target | Reasoning |
-|--------|--------|-----------|
-| **Functions** | >80% | Most functions should have at least one test |
-| **Branches** | >70% | Test main paths and critical edge cases |
-| **Statements** | >80% | Most code lines should execute during tests |
-| **Lines** | >80% | Similar to statements |
-
-### Interpreting Coverage
-
-**High coverage (≥80%)** means:
-- ✅ Most code paths are exercised
-- ✅ Tests catch regressions
-- ✅ Safe to refactor
-
-**Low coverage (<50%)** means:
-- ⚠️ Untested code may have bugs
-- ⚠️ Refactoring is risky
-- ⚠️ Should write more tests
-
-**Note:** 100% coverage doesn't guarantee bug-free code. Focus on testing:
-- Critical business logic
-- Edge cases and error paths
-- Complex algorithms
-- Security-sensitive code
-
-### Example Coverage Report
-
-```
-File: Calculator.ets
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Statements: 85.7% (12/14)
-Branches:   75.0% (6/8)
-Functions: 100.0% (4/4)
-Lines:      87.5% (14/16)
-
-Uncovered lines: 23, 45-47
-```
-
-This tells you:
-- Lines 23 and 45-47 need tests
-- Branch coverage could be improved
-- All functions have at least basic tests
+See `harmonyos-local-test` skill for detailed running instructions, troubleshooting, and `ohpm install` prerequisites.
